@@ -2,6 +2,8 @@ import type { Lang } from "./i18n";
 import type { Status } from "./farm-data";
 
 export interface AnalyzedCropResult {
+  isValidCrop: boolean;
+  invalidReason?: string;
   cropKey: string;
   diseaseKey: string;
   cropName: string;
@@ -16,6 +18,7 @@ export interface AnalyzedCropResult {
     yellowingPct: number;
     powderyPct: number;
     rustPct: number;
+    botanicalScorePct: number;
     leafShape: string;
   };
   symptoms: string[];
@@ -27,16 +30,18 @@ export interface AnalyzedCropResult {
 
 /**
  * Analyzes raw image pixels on an HTML canvas to extract real color histograms,
- * leaf aspect ratio, and necrotic lesion distribution.
+ * leaf aspect ratio, botanical foliage score, and necrotic lesion distribution.
  */
 export const analyzeImagePixels = async (
   imageSrc: string,
 ): Promise<{
+  isValidCrop: boolean;
   greennessPct: number;
   necrosisPct: number;
   yellowingPct: number;
   powderyPct: number;
   rustPct: number;
+  botanicalScorePct: number;
   aspectRatio: number;
   leafShape: string;
 }> => {
@@ -47,11 +52,13 @@ export const analyzeImagePixels = async (
       if (resolved) return;
       resolved = true;
       resolve({
+        isValidCrop: true,
         greennessPct: 68,
         necrosisPct: 14,
         yellowingPct: 11,
         powderyPct: 4,
         rustPct: 3,
+        botanicalScorePct: 88,
         aspectRatio: 1.0,
         leafShape: "Compound Lobed (టమోటా/మిరప)",
       });
@@ -91,6 +98,7 @@ export const analyzeImagePixels = async (
         let yellowPixels = 0;
         let powderyPixels = 0;
         let rustPixels = 0;
+        let nonBotanicalPixels = 0;
         let totalPlantPixels = 0;
 
         for (let i = 0; i < data.length; i += 4) {
@@ -98,35 +106,42 @@ export const analyzeImagePixels = async (
           const g = data[i + 1];
           const b = data[i + 2];
 
-          // Skip very dark or transparent pixels
+          // Skip completely dark or bright blown-out pixels
           const brightness = (r + g + b) / 3;
-          if (brightness < 20 || brightness > 250) continue;
+          if (brightness < 15 || brightness > 252) continue;
 
           totalPlantPixels++;
 
-          // Green leaf area (G > R and G > B)
-          if (g > r * 1.1 && g > b * 1.1) {
+          // 1. Green leaf area (Chlorophyll: G dominates)
+          if (g > r * 1.05 && g > b * 1.05) {
             greenPixels++;
           }
-          // Necrotic / Brown / Black spots (R > G and R < 140, low brightness)
+          // 2. Necrotic / Brown / Plant stem spots (R > G, G > B, low brightness)
           else if (r > g && g > b && brightness < 110) {
             necroticPixels++;
           }
-          // Chlorotic / Yellowing (High R and High G, low B)
-          else if (r > 130 && g > 130 && b < 100 && Math.abs(r - g) < 45) {
+          // 3. Chlorotic / Yellowing (High R and High G, low B)
+          else if (r > 120 && g > 120 && b < 105 && Math.abs(r - g) < 45) {
             yellowPixels++;
           }
-          // Powdery / White fungal patches (High brightness, neutral color)
-          else if (brightness > 190 && Math.abs(r - g) < 25 && Math.abs(g - b) < 25) {
+          // 4. Powdery / White fungal patches (High brightness, neutral color)
+          else if (brightness > 185 && Math.abs(r - g) < 25 && Math.abs(g - b) < 25) {
             powderyPixels++;
           }
-          // Rust / Orange pustules (High R, moderate G, low B)
-          else if (r > 150 && g > 70 && g < 130 && b < 60) {
+          // 5. Rust / Orange pustules (High R, moderate G, low B)
+          else if (r > 140 && g > 65 && g < 135 && b < 65) {
             rustPixels++;
+          }
+          // 6. Non-botanical indicators: strong blues/cyans, vibrant magenta/purple, skin tones without foliage
+          else if ((b > r * 1.3 && b > g * 1.2) || (r > 160 && b > 140 && g < 100)) {
+            nonBotanicalPixels++;
           }
         }
 
         const validTotal = Math.max(totalPlantPixels, 1);
+        const botanicalPixels =
+          greenPixels + necroticPixels + yellowPixels + powderyPixels + rustPixels;
+        const botanicalScorePct = Math.round((botanicalPixels / validTotal) * 100);
         const greennessPct = Math.round((greenPixels / validTotal) * 100);
         const necrosisPct = Math.round((necroticPixels / validTotal) * 100);
         const yellowingPct = Math.round((yellowPixels / validTotal) * 100);
@@ -137,12 +152,26 @@ export const analyzeImagePixels = async (
         const leafShape =
           aspectRatio > 1.4 ? "Narrow Blade (వరి/మొక్కజొన్న)" : "Compound Lobed (టమోటా/మిరప)";
 
+        // Image Validation Rule:
+        // A valid plant/crop leaf image must contain organic plant color signatures (>=15%)
+        // and cannot be overwhelmed by artificial non-plant elements.
+        const isValidCrop =
+          botanicalScorePct >= 15 &&
+          (greennessPct >= 8 ||
+            yellowingPct >= 8 ||
+            necrosisPct >= 8 ||
+            rustPct >= 5 ||
+            powderyPct >= 5) &&
+          nonBotanicalPixels < validTotal * 0.75;
+
         resolve({
+          isValidCrop,
           greennessPct,
           necrosisPct,
           yellowingPct,
           powderyPct,
           rustPct,
+          botanicalScorePct,
           aspectRatio,
           leafShape,
         });
@@ -169,6 +198,20 @@ export const classifyCropAndDisease = async (
   soilMoisture: number = 64,
 ): Promise<AnalyzedCropResult> => {
   const metrics = await analyzeImagePixels(imageSrc);
+
+  // If the image failed botanical validation (not a plant/crop)
+  if (!metrics.isValidCrop) {
+    return getLocalizedCropDiagnosis(
+      "invalid",
+      "invalid_photo",
+      "attention",
+      30,
+      metrics,
+      lang,
+      location,
+      soilMoisture,
+    );
+  }
 
   // Decision Tree based on real visual image metrics:
   let cropKey = "tomato";
@@ -870,6 +913,127 @@ export const getLocalizedCropDiagnosis = (
         speechText: `ਤੁਹਾਡੀ ਫ਼ਸਲ ਪੂਰੀ ਤਰ੍ਹਾਂ ਸਿਹਤਮੰਦ ਹੈ।`,
       },
     },
+    invalid_invalid_photo: {
+      te: {
+        cropName: "గుర్తించబడని చిత్రం (Non-Plant)",
+        scientificName: "Non-Botanical Object",
+        diseaseName: "చెల్లని ఫోటో - పంట లేదా మొక్క కాదు",
+        pathogen: "పంట లేదా ఆకు చిత్రం కాదు",
+        symptoms: [
+          "అప్‌లోడ్ చేసిన చిత్రంలో పంట లేదా ఆకు లక్షణాలు కనిపించలేదు",
+          "దయచేసి మంచి కాంతిలో తీసిన స్పష్టమైన పంట ఆకు ఫోటోను అప్‌లోడ్ చేయండి",
+        ],
+        organicRemedy:
+          "దయచేసి మీ పొలంలోని పంట లేదా తెగులు సోకిన ఆకు ఫోటోను స్పష్టంగా కెమెరాతో తీసి అప్‌లోడ్ చేయండి.",
+        chemicalControl:
+          "సరైన పంట ఫోటోను అప్‌లోడ్ చేసిన తర్వాత రసాయన పిచికారీ సిఫార్సులు అందుబాటులోకి వస్తాయి.",
+        prevention: "కెమెరాను ఆకుకి 10-15 సెం.మీ దూరంలో ఉంచి స్పష్టమైన ఫోటో తీయండి.",
+        speechText:
+          "అప్‌లోడ్ చేసిన చిత్రం పంట లేదా మొక్కగా గుర్తించబడలేదు. దయచేసి సరైన పంట ఆకు ఫోటోను అప్‌లోడ్ చేయండి.",
+      },
+      en: {
+        cropName: "Unidentified Image (Non-Plant)",
+        scientificName: "Non-Botanical Object",
+        diseaseName: "Invalid Photo – Not a Crop or Plant",
+        pathogen: "No plant foliage detected",
+        symptoms: [
+          "The uploaded image does not contain plant foliage, leaf tissue, or crop characteristics",
+          "Please capture a focused close-up photo of the crop leaf in good daylight",
+        ],
+        organicRemedy: "Please upload a clear photo of your farm crop or leaf.",
+        chemicalControl:
+          "Chemical recommendations will appear once a valid crop photo is analyzed.",
+        prevention:
+          "Hold camera 10-15 cm away from the leaf with proper lighting for best results.",
+        speechText:
+          "The uploaded photo does not appear to be a crop or plant. Please upload a clear photo of a crop leaf.",
+      },
+      hi: {
+        cropName: "अज्ञात वस्तु (गैर-फसल फोटो)",
+        scientificName: "Non-Botanical Object",
+        diseaseName: "अमान्य फोटो - फसल या पौधा नहीं है",
+        pathogen: "पौधे का कोई हिस्सा नहीं मिला",
+        symptoms: [
+          "अपलोड की गई फोटो में पत्ती या फसल के लक्षण नहीं मिले",
+          "कृपया अच्छी रोशनी में फसल की पत्ती की स्पष्ट फोटो अपलोड करें",
+        ],
+        organicRemedy: "कृपया अपने खेत की फसल या पत्ती की स्पष्ट फोटो लें और अपलोड करें।",
+        chemicalControl: "सही फसल फोटो अपलोड करने के बाद दवा की सिफारिश दिखाई देगी।",
+        prevention: "पत्ती को कैमरे के सामने 10-15 सेमी की दूरी पर रखकर फोटो लें।",
+        speechText:
+          "अपलोड की गई फोटो फसल या पौधा नहीं है। कृपया सही फसल या पत्ती की फोटो अपलोड करें।",
+      },
+      ta: {
+        cropName: "அடையாளம் தெரியாத படம்",
+        scientificName: "Non-Botanical Object",
+        diseaseName: "தவறான புகைப்படம் - பயிர் அல்ல",
+        pathogen: "தாவர பகுதி இல்லை",
+        symptoms: [
+          "பயிரின் இலை அல்லது செடி படம் இல்லை",
+          "சரியான பயிர் இலையின் புகைப்படத்தை பதிவேற்றவும்",
+        ],
+        organicRemedy: "தயவுசெய்து சரியான பயிர் இலையின் புகைப்படத்தை பதிவேற்றவும்.",
+        chemicalControl: "சரியான பயிர் படம் பதிவேற்றிய பின் மருந்துகள் காட்டப்படும்.",
+        prevention: "நல்ல வெளிச்சத்தில் பயிர் இலையை படம் பிடிக்கவும்.",
+        speechText:
+          "பதிவேற்றப்பட்ட படம் பயிர் அல்ல. தயவுசெய்து சரியான பயிர் இலையின் புகைப்படத்தை பதிவேற்றவும்.",
+      },
+      kn: {
+        cropName: "ಗುರುತಿಸಲಾಗದ ಚಿತ್ರ",
+        scientificName: "Non-Botanical Object",
+        diseaseName: "ಅಮಾನ್ಯ ಫೋಟೋ - ಬೆಳೆ ಅಥವಾ ಸಸ್ಯವಲ್ಲ",
+        pathogen: "ಸಸ್ಯದ ಭಾಗ ಕಂಡುಬಂದಿಲ್ಲ",
+        symptoms: ["ಫೋಟೋದಲ್ಲಿ ಬೆಳೆಯ ಲಕ್ಷಣಗಳಿಲ್ಲ", "ದಯವಿಟ್ಟು ಸ್ಪಷ್ಟ ಬೆಳೆ ಎಲೆಯ ಫೋಟೋ ಹಾಕಿ"],
+        organicRemedy: "ದಯವಿಟ್ಟು ನಿಮ್ಮ ಹೊಲದ ಬೆಳೆ ಅಥವಾ ಎಲೆಯ ಸ್ಪಷ್ಟ ಫೋಟೋ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ.",
+        chemicalControl: "ಸರಿಯಾದ ಬೆಳೆ ಫೋಟೋ ಹಾಕಿದ ನಂತರ ಮದ್ದು ವಿವರ ಬರುತ್ತದೆ.",
+        prevention: "ಬೆಳಕಿನಲ್ಲಿ ಎಲೆಯ ಫೋಟೋ ತೆಗೆಯಿರಿ.",
+        speechText: "ಅಪ್‌ಲೋಡ್ ಮಾಡಿದ ಫೋಟೋ ಬೆಳೆ ಅಲ್ಲ. ದಯವಿಟ್ಟು ಸರಿಯಾದ ಬೆಳೆ ಎಲೆಯ ಫೋಟೋ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ.",
+      },
+      mr: {
+        cropName: "अनोळखी वस्तू (पीक नाही)",
+        scientificName: "Non-Botanical Object",
+        diseaseName: "अवैध फोटो - पीक किंवा वनस्पती नाही",
+        pathogen: "वनस्पतीचा भाग नाही",
+        symptoms: ["फोटोमध्ये पीक किंवा पानाचे लक्षण नाही", "कृपया स्पष्ट पानांचा फोटो अपलोड करा"],
+        organicRemedy: "कृपया शेतातील पिकाचा किंवा पानाचा स्पष्ट फोटो अपलोड करा.",
+        chemicalControl: "योग्य पीक फोटो दिल्यानंतर औषधांची माहिती मिळेल.",
+        prevention: "चांगल्या प्रकाशात पानाचा फोटो घ्या.",
+        speechText: "अपलोड केलेला फोटो पीक नाही. कृपया पिकाचा किंवा पानाचा योग्य फोटो अपलोड करा.",
+      },
+      bn: {
+        cropName: "অপরিচিত বস্তু (ফসল নয়)",
+        scientificName: "Non-Botanical Object",
+        diseaseName: "অবৈধ ছবি - ফসল বা উদ্ভিদ নয়",
+        pathogen: "গাছের অংশ পাওয়া যায়নি",
+        symptoms: ["ছবিতে ফসলের কোনো লক্ষণ নেই", "অনুগ্রহ করে স্পষ্ট পাতার ছবি দিন"],
+        organicRemedy: "অনুগ্রহ করে আপনার ফসলের স্পষ্ট ছবি আপলোড করুন।",
+        chemicalControl: "সঠিক ফসলের ছবি দিলে ওষুধের তথ্য দেখানো হবে।",
+        prevention: "দিনের আলোতে স্পষ্ট পাতার ছবি তুলুন।",
+        speechText: "আপলোড করা ছবিটি ফসল নয়। অনুগ্রহ করে সঠিক ফসলের পাতার ছবি আপলোড করুন।",
+      },
+      gu: {
+        cropName: "અજાણી વસ્તુ (પાક નથી)",
+        scientificName: "Non-Botanical Object",
+        diseaseName: "અમાન્ય ફોટો - પાક કે છોડ નથી",
+        pathogen: "છોડનો ભાગ મળ્યો નથી",
+        symptoms: ["ફોટામાં પાકના લક્ષણો નથી", "કૃપા કરીને પાનનો સ્પષ્ટ ફોટો અપલોડ કરો"],
+        organicRemedy: "કૃપા કરીને ખેતરના પાકનો કે પાનનો સાચો ફોટો અપલોડ કરો.",
+        chemicalControl: "સાચો ફોટો આપ્યા પછી દવાની સલાહ મળશે.",
+        prevention: "સારા અજવાળામાં પાનનો ફોટો લો.",
+        speechText: "અપલોડ કરેલો ફોટો પાક નથી. કૃપા કરીને સાચો પાક કે પાનનો ફોટો અપલોડ કરો.",
+      },
+      pa: {
+        cropName: "ਅਣਪਛਾਤੀ ਵਸਤੂ (ਫ਼ਸਲ ਨਹੀਂ)",
+        scientificName: "Non-Botanical Object",
+        diseaseName: "ਗਲਤ ਫੋਟੋ - ਫ਼ਸਲ ਜਾਂ ਪੌਦਾ ਨਹੀਂ ਹੈ",
+        pathogen: "ਪੌਦੇ ਦਾ ਹਿੱਸਾ ਨਹੀਂ ਮਿਲਿਆ",
+        symptoms: ["ਫੋਟੋ ਵਿੱਚ ਫ਼ਸਲ ਦੇ ਲੱਛਣ ਨਹੀਂ ਹਨ", "ਕਿਰਪਾ ਕਰਕੇ ਸਾਫ਼ ਪੱਤੇ ਦੀ ਫੋਟੋ ਦਿਓ"],
+        organicRemedy: "ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੇ ਖੇਤ ਦੀ ਫ਼ਸਲ ਜਾਂ ਪੱਤੇ ਦੀ ਸਾਫ਼ ਫੋਟੋ ਅਪਲੋਡ ਕਰੋ।",
+        chemicalControl: "ਸਹੀ ਫੋਟੋ ਦੇਣ ਤੋਂ ਬਾਅਦ ਦਵਾਈ ਦੀ ਸਲਾਹ ਮਿਲੇਗੀ।",
+        prevention: "ਚੰਗੀ ਰੌਸ਼ਨੀ ਵਿੱਚ ਪੱਤੇ ਦੀ ਫੋਟੋ ਖਿੱਚੋ।",
+        speechText: "ਅਪਲੋਡ ਕੀਤੀ ਫੋਟੋ ਫ਼ਸਲ ਨਹੀਂ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਸਹੀ ਪੱਤੇ ਜਾਂ ਫ਼ਸਲ ਦੀ ਫੋਟੋ ਅਪਲੋਡ ਕਰੋ।",
+      },
+    },
   };
 
   const lookupKey = `${cropKey}_${diseaseKey}`;
@@ -879,7 +1043,11 @@ export const getLocalizedCropDiagnosis = (
     database["tomato_early_blight"][lang] ??
     database["tomato_early_blight"].te;
 
+  const isValidCrop = cropKey !== "invalid" && diseaseKey !== "invalid_photo";
+
   return {
+    isValidCrop,
+    invalidReason: isValidCrop ? undefined : details.speechText,
     cropKey,
     diseaseKey,
     cropName: details.cropName,

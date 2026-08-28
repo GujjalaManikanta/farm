@@ -516,7 +516,25 @@ function CropDoctor() {
       setHasScanned(true);
       setIsScanning(false);
 
-      // Save into live history ledger
+      if (!result.isValidCrop) {
+        setValidationError(
+          result.invalidReason ||
+            (lang === "te"
+              ? "అప్‌లోడ్ చేసిన చిత్రం పంట లేదా మొక్కగా గుర్తించబడలేదు. దయచేసి సరైన పంట ఆకు ఫోటోను అప్‌లోడ్ చేయండి."
+              : lang === "hi"
+                ? "अपलोड की गई फोटो फसल या पौधा नहीं है। कृपया स्पष्ट पत्ती या फसल की सही फोटो अपलोड करें।"
+                : "The uploaded image does not appear to be a crop or plant. Please upload a clear photo of a crop leaf."),
+        );
+        toast.error(
+          lang === "te"
+            ? "సరైన పంట లేదా ఆకు ఫోటోను అప్‌లోడ్ చేయండి!"
+            : "Please upload a correct crop or leaf photo!",
+        );
+        playSpeech(result.speechText, lang);
+        return;
+      }
+
+      // Save into live history ledger only if valid crop
       const now = new Date();
       const formattedDate = `${now.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} • ${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 
@@ -787,163 +805,270 @@ function CropDoctor() {
           {/* Right Column: Dynamic Localized AI Diagnosis & Remedies (7 cols) */}
           <div className="lg:col-span-7 space-y-4">
             {hasScanned && activeResult ? (
-              <SectionCard
-                title={activeResult.diseaseName}
-                icon={Sparkles}
-                action={
-                  <StatusPill
-                    status={activeResult.severity}
-                    label={
-                      activeResult.severity === "good"
-                        ? lang === "te"
-                          ? "ఆరోగ్యంగా ఉంది"
-                          : lang === "hi"
-                            ? "स्वस्थ"
-                            : "Healthy"
-                        : lang === "te"
-                          ? "శ్రద్ధ అవసరం"
-                          : lang === "hi"
-                            ? "ध्यान देने योग्य"
-                            : "Attention Needed"
-                    }
-                  />
-                }
-              >
-                <div className="space-y-4">
-                  {/* AI Crop Detection & Location Banner */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5">
-                      <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 uppercase">
-                        {ui.detectedCrop}
-                      </span>
-                      <p className="text-base font-black text-emerald-700 dark:text-emerald-200 mt-0.5">
-                        {activeResult.cropName}
-                      </p>
-                      <p className="text-[10px] italic text-muted-foreground">
-                        {activeResult.scientificName}
-                      </p>
+              !activeResult.isValidCrop ? (
+                <div className="rounded-3xl border-2 border-rose-500/40 bg-rose-500/10 p-6 space-y-4 shadow-md backdrop-blur-md">
+                  <div className="flex items-start gap-4">
+                    <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-rose-500/20 text-rose-600 dark:text-rose-400">
+                      <XCircle className="size-7" />
                     </div>
-
-                    <div className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-3.5">
-                      <span className="text-[11px] font-bold text-sky-800 dark:text-sky-300 uppercase">
-                        {ui.soilMoisture}
-                      </span>
-                      <p className="text-base font-black text-sky-700 dark:text-sky-200 mt-0.5">
-                        {globalSoilMoisture}% (Optimal)
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {ui.pathogenLabel}: {activeResult.pathogen}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-rose-500/20 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-rose-700 dark:text-rose-300">
+                          {lang === "te"
+                            ? "చిత్ర నిర్ధారణ వైఫల్యం"
+                            : lang === "hi"
+                              ? "पहचान विफल"
+                              : "Image Validation Failed"}
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-black text-rose-700 dark:text-rose-300 mt-1">
+                        {activeResult.diseaseName}
+                      </h3>
+                      <p className="mt-1.5 text-xs text-rose-800/90 dark:text-rose-200 leading-relaxed font-medium">
+                        {activeResult.speechText}
                       </p>
                     </div>
                   </div>
 
-                  {/* Visual AI Image Telemetry */}
-                  <div className="rounded-2xl border border-border/70 bg-muted/40 p-3.5 space-y-2">
-                    <div className="flex items-center justify-between text-xs font-bold text-foreground">
-                      <span className="flex items-center gap-1.5">
-                        <Activity className="size-3.5 text-primary" />
-                        {ui.visualAnalysisTitle}
+                  {/* Photography Tips for Farmers */}
+                  <div className="rounded-2xl border border-rose-500/20 bg-card p-4 space-y-2 text-xs">
+                    <p className="font-bold text-foreground flex items-center gap-1.5">
+                      <Sparkles className="size-3.5 text-amber-500" />
+                      <span>
+                        {lang === "te"
+                          ? "ఖచ్చితమైన స్కాన్ కోసం మార్గదర్శకాలు:"
+                          : lang === "hi"
+                            ? "सटीक जांच के लिए निर्देश:"
+                            : "Guidelines for Accurate Crop Scan:"}
                       </span>
-                      <span className="text-emerald-600 font-extrabold">
-                        {ui.confidence}: {activeResult.confidence}%
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
-                      <div className="rounded-xl border border-border/60 bg-card p-2">
-                        <p className="text-muted-foreground">{ui.chlorophyll}</p>
-                        <p className="font-bold text-emerald-600 text-sm">
-                          {activeResult.imageMetrics.greennessPct}%
-                        </p>
-                      </div>
-                      <div className="rounded-xl border border-border/60 bg-card p-2">
-                        <p className="text-muted-foreground">{ui.necrosis}</p>
-                        <p className="font-bold text-rose-600 text-sm">
-                          {activeResult.imageMetrics.necrosisPct}%
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Symptoms */}
-                  <div className="rounded-2xl border border-border/70 bg-card p-4">
-                    <p className="text-xs font-bold text-foreground uppercase tracking-wider mb-2">
-                      {ui.symptoms}
                     </p>
-                    <ul className="space-y-1.5 text-xs text-muted-foreground">
-                      {activeResult.symptoms.map((s, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <span className="text-emerald-600 font-bold">•</span>
-                          <span>{s}</span>
-                        </li>
-                      ))}
+                    <ul className="list-disc list-inside space-y-1.5 text-muted-foreground text-[11px] leading-relaxed">
+                      <li>
+                        {lang === "te"
+                          ? "పంట ఆకు లేదా మొక్క భాగాన్ని కెమెరాకు దగ్గరగా (10-15 సెం.మీ) ఉంచండి."
+                          : lang === "hi"
+                            ? "पौधे या पत्ती को कैमरे के करीब (10-15 सेमी) रखें।"
+                            : "Hold the camera 10-15 cm close to the infected plant leaf."}
+                      </li>
+                      <li>
+                        {lang === "te"
+                          ? "మంచి సూర్యకాంతి లేదా స్పష్టమైన వెలుతురులో మాత్రమే ఫోటో తీయండి."
+                          : lang === "hi"
+                            ? "अच्छी रोशनी या दिन के उजाले में फोटो लें।"
+                            : "Take the photo in bright, natural daylight without heavy shadows."}
+                      </li>
+                      <li>
+                        {lang === "te"
+                          ? "మనుషులు, జంతువులు, గది వస్తువులు లేదా వాహనాల ఫోటోలు ఇవ్వవద్దు."
+                          : lang === "hi"
+                            ? "इंसान, जानवर या गैर-कृषि वस्तुओं की फोटो न दें।"
+                            : "Avoid non-agricultural photos (people, vehicles, indoor rooms, or screens)."}
+                      </li>
                     </ul>
                   </div>
 
-                  {/* Remedy Navigation Tabs */}
-                  <div className="flex items-center gap-2 border-b border-border/60 pb-2">
+                  {/* Actions */}
+                  <div className="flex flex-wrap items-center gap-2.5 pt-1">
                     <button
-                      onClick={() => setActiveTab("organic")}
-                      className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
-                        activeTab === "organic"
-                          ? "bg-emerald-500 text-white shadow-2xs"
-                          : "bg-muted text-muted-foreground hover:text-foreground"
-                      }`}
+                      onClick={() => {
+                        if (cameraInputRef.current) cameraInputRef.current.click();
+                      }}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-rose-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-rose-700 active:scale-95 transition-all cursor-pointer"
                     >
-                      <Sprout className="size-3.5" />
-                      <span>{ui.organicTab}</span>
+                      <Camera className="size-4" />
+                      <span>
+                        {lang === "te"
+                          ? "కెమెరాతో సరైన ఫోటో తీయండి"
+                          : lang === "hi"
+                            ? "कैमरे से सही फोटो लें"
+                            : "Take Photo with Camera"}
+                      </span>
                     </button>
-                    <button
-                      onClick={() => setActiveTab("chemical")}
-                      className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
-                        activeTab === "chemical"
-                          ? "bg-emerald-500 text-white shadow-2xs"
-                          : "bg-muted text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <FlaskConical className="size-3.5" />
-                      <span>{ui.chemicalTab}</span>
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("prevention")}
-                      className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
-                        activeTab === "prevention"
-                          ? "bg-emerald-500 text-white shadow-2xs"
-                          : "bg-muted text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <ShieldCheck className="size-3.5" />
-                      <span>{ui.preventionTab}</span>
-                    </button>
-                  </div>
 
-                  {/* Tab Body */}
-                  <div className="rounded-2xl border border-border/80 bg-card p-4 leading-relaxed text-xs sm:text-sm text-foreground">
-                    {activeTab === "organic" && (
-                      <div className="space-y-2">
-                        <p className="font-bold text-emerald-600">{ui.organicHead}</p>
-                        <p>{activeResult.organicRemedy}</p>
-                      </div>
-                    )}
-                    {activeTab === "chemical" && (
-                      <div className="space-y-2">
-                        <p className="font-bold text-sky-600">{ui.chemicalHead}</p>
-                        <p>{activeResult.chemicalControl}</p>
-                      </div>
-                    )}
-                    {activeTab === "prevention" && (
-                      <div className="space-y-2">
-                        <p className="font-bold text-amber-600">{ui.preventionHead}</p>
-                        <p>{activeResult.prevention}</p>
-                      </div>
-                    )}
-                  </div>
+                    <button
+                      onClick={() => {
+                        if (fileInputRef.current) fileInputRef.current.click();
+                      }}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-2.5 text-xs font-bold text-foreground hover:bg-muted active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Upload className="size-4 text-primary" />
+                      <span>
+                        {lang === "te"
+                          ? "గ్యాలరీ నుండి సరైన ఫోటో ఎంచుకోండి"
+                          : lang === "hi"
+                            ? "गैलरी से सही फोटो चुनें"
+                            : "Upload from Gallery"}
+                      </span>
+                    </button>
 
-                  <div className="pt-2">
-                    <AiNote>{ui.savedNote}</AiNote>
+                    <button
+                      onClick={() => playSpeech(activeResult.speechText, lang)}
+                      className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-card px-3.5 py-2.5 text-xs font-bold text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                    >
+                      <Volume2 className="size-4 text-emerald-600" />
+                      <span>{lang === "te" ? "వినండి" : "Listen"}</span>
+                    </button>
                   </div>
                 </div>
-              </SectionCard>
+              ) : (
+                <SectionCard
+                  title={activeResult.diseaseName}
+                  icon={Sparkles}
+                  action={
+                    <StatusPill
+                      status={activeResult.severity}
+                      label={
+                        activeResult.severity === "good"
+                          ? lang === "te"
+                            ? "ఆరోగ్యంగా ఉంది"
+                            : lang === "hi"
+                              ? "स्वस्थ"
+                              : "Healthy"
+                          : lang === "te"
+                            ? "శ్రద్ధ అవసరం"
+                            : lang === "hi"
+                              ? "ध्यान देने योग्य"
+                              : "Attention Needed"
+                      }
+                    />
+                  }
+                >
+                  <div className="space-y-4">
+                    {/* AI Crop Detection & Location Banner */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5">
+                        <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 uppercase">
+                          {ui.detectedCrop}
+                        </span>
+                        <p className="text-base font-black text-emerald-700 dark:text-emerald-200 mt-0.5">
+                          {activeResult.cropName}
+                        </p>
+                        <p className="text-[10px] italic text-muted-foreground">
+                          {activeResult.scientificName}
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-3.5">
+                        <span className="text-[11px] font-bold text-sky-800 dark:text-sky-300 uppercase">
+                          {ui.soilMoisture}
+                        </span>
+                        <p className="text-base font-black text-sky-700 dark:text-sky-200 mt-0.5">
+                          {globalSoilMoisture}% (Optimal)
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {ui.pathogenLabel}: {activeResult.pathogen}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Visual AI Image Telemetry */}
+                    <div className="rounded-2xl border border-border/70 bg-muted/40 p-3.5 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <Activity className="size-3.5 text-primary" />
+                          {ui.visualAnalysisTitle}
+                        </span>
+                        <span className="text-emerald-600 font-extrabold">
+                          {ui.confidence}: {activeResult.confidence}%
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                        <div className="rounded-xl border border-border/60 bg-card p-2">
+                          <p className="text-muted-foreground">{ui.chlorophyll}</p>
+                          <p className="font-bold text-emerald-600 text-sm">
+                            {activeResult.imageMetrics.greennessPct}%
+                          </p>
+                        </div>
+                        <div className="rounded-xl border border-border/60 bg-card p-2">
+                          <p className="text-muted-foreground">{ui.necrosis}</p>
+                          <p className="font-bold text-rose-600 text-sm">
+                            {activeResult.imageMetrics.necrosisPct}%
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Symptoms */}
+                    <div className="rounded-2xl border border-border/70 bg-card p-4">
+                      <p className="text-xs font-bold text-foreground uppercase tracking-wider mb-2">
+                        {ui.symptoms}
+                      </p>
+                      <ul className="space-y-1.5 text-xs text-muted-foreground">
+                        {activeResult.symptoms.map((s, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-emerald-600 font-bold">•</span>
+                            <span>{s}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Remedy Navigation Tabs */}
+                    <div className="flex items-center gap-2 border-b border-border/60 pb-2">
+                      <button
+                        onClick={() => setActiveTab("organic")}
+                        className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
+                          activeTab === "organic"
+                            ? "bg-emerald-500 text-white shadow-2xs"
+                            : "bg-muted text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <Sprout className="size-3.5" />
+                        <span>{ui.organicTab}</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("chemical")}
+                        className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
+                          activeTab === "chemical"
+                            ? "bg-emerald-500 text-white shadow-2xs"
+                            : "bg-muted text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <FlaskConical className="size-3.5" />
+                        <span>{ui.chemicalTab}</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("prevention")}
+                        className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
+                          activeTab === "prevention"
+                            ? "bg-emerald-500 text-white shadow-2xs"
+                            : "bg-muted text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <ShieldCheck className="size-3.5" />
+                        <span>{ui.preventionTab}</span>
+                      </button>
+                    </div>
+
+                    {/* Tab Body */}
+                    <div className="rounded-2xl border border-border/80 bg-card p-4 leading-relaxed text-xs sm:text-sm text-foreground">
+                      {activeTab === "organic" && (
+                        <div className="space-y-2">
+                          <p className="font-bold text-emerald-600">{ui.organicHead}</p>
+                          <p>{activeResult.organicRemedy}</p>
+                        </div>
+                      )}
+                      {activeTab === "chemical" && (
+                        <div className="space-y-2">
+                          <p className="font-bold text-sky-600">{ui.chemicalHead}</p>
+                          <p>{activeResult.chemicalControl}</p>
+                        </div>
+                      )}
+                      {activeTab === "prevention" && (
+                        <div className="space-y-2">
+                          <p className="font-bold text-amber-600">{ui.preventionHead}</p>
+                          <p>{activeResult.prevention}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-2">
+                      <AiNote>{ui.savedNote}</AiNote>
+                    </div>
+                  </div>
+                </SectionCard>
+              )
             ) : (
               <div className="flex flex-col items-center justify-center rounded-3xl border border-border/80 bg-card p-14 text-center text-muted-foreground shadow-xs">
                 <div className="flex size-16 items-center justify-center rounded-3xl bg-emerald-500/10 text-emerald-600 mb-4">
