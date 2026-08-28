@@ -2,6 +2,7 @@
  * AgriSmart AI – Universal Database Client & Cloud Adapter
  * Supports Supabase / PostgreSQL cloud synchronization with local storage offline fallback.
  */
+import { getSupabaseClient } from "@/lib/supabase";
 
 export interface DbFarmerProfile {
   id?: string;
@@ -55,24 +56,40 @@ const STORAGE_KEYS = {
   CHATS: "agrismart_db_chats",
 };
 
-// Database Connection Config
-const SUPABASE_URL = (typeof process !== "undefined" ? process.env?.VITE_SUPABASE_URL : "") || "";
-const SUPABASE_KEY = (typeof process !== "undefined" ? process.env?.VITE_SUPABASE_ANON_KEY : "") || "";
-
 export const db = {
   /**
    * 1. Farmer Profile
    */
   async getFarmerProfile(): Promise<DbFarmerProfile> {
-    if (typeof window === "undefined") {
-      return defaultProfile;
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        const { data, error } = await client.from("farmers").select("*").limit(1).single();
+        if (data && !error) {
+          return {
+            id: data.id,
+            farmerName: data.farmer_name,
+            location: data.location,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            primaryCrop: data.primary_crop,
+            fieldName: data.field_name,
+            fieldSizeAcres: data.field_size_acres,
+            preferredLanguage: data.preferred_language,
+          };
+        }
+      } catch {
+        // Fallback to local
+      }
     }
 
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.PROFILE);
-      if (stored) return JSON.parse(stored);
-    } catch {
-      // Fallback
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEYS.PROFILE);
+        if (stored) return JSON.parse(stored);
+      } catch {
+        // Fallback
+      }
     }
 
     return defaultProfile;
@@ -86,6 +103,25 @@ export const db = {
       localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(updated));
     }
 
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.from("farmers").upsert({
+          farmer_name: updated.farmerName,
+          location: updated.location,
+          latitude: updated.latitude,
+          longitude: updated.longitude,
+          primary_crop: updated.primaryCrop,
+          field_name: updated.fieldName,
+          field_size_acres: updated.fieldSizeAcres,
+          preferred_language: updated.preferredLanguage,
+          updated_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.warn("Could not sync profile to Supabase:", err);
+      }
+    }
+
     return updated;
   },
 
@@ -93,16 +129,44 @@ export const db = {
    * 2. Crop Scan Diagnostics Records
    */
   async getScans(): Promise<DbCropScan[]> {
-    if (typeof window === "undefined") return defaultScans;
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        const { data, error } = await client
+          .from("crop_scans")
+          .select("*")
+          .order("created_at", { ascending: false });
 
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.SCANS);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (data && !error && data.length > 0) {
+          return data.map((d) => ({
+            id: d.id,
+            cropName: d.crop_name,
+            diseaseName: d.disease_name,
+            status: d.status,
+            confidence: d.confidence,
+            symptoms: Array.isArray(d.symptoms) ? d.symptoms : [],
+            organicRemedy: d.organic_remedy,
+            chemicalRemedy: d.chemical_remedy,
+            preventiveCare: d.preventive_care,
+            imageUrl: d.image_url,
+            createdAt: d.created_at,
+          }));
+        }
+      } catch {
+        // Fallback to local
       }
-    } catch {
-      // Fallback
+    }
+
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEYS.SCANS);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {
+        // Fallback
+      }
     }
 
     return defaultScans;
@@ -122,6 +186,26 @@ export const db = {
       localStorage.setItem(STORAGE_KEYS.SCANS, JSON.stringify(updated));
     }
 
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.from("crop_scans").insert({
+          crop_name: scan.cropName,
+          disease_name: scan.diseaseName,
+          status: scan.status,
+          confidence: scan.confidence,
+          symptoms: scan.symptoms,
+          organic_remedy: scan.organicRemedy,
+          chemical_remedy: scan.chemicalRemedy,
+          preventive_care: scan.preventiveCare,
+          image_url: scan.imageUrl,
+          created_at: newRecord.createdAt,
+        });
+      } catch (err) {
+        console.warn("Could not sync scan to Supabase:", err);
+      }
+    }
+
     return newRecord;
   },
 
@@ -129,16 +213,41 @@ export const db = {
    * 3. Crop Growth Logs
    */
   async getGrowthLogs(): Promise<DbGrowthRecord[]> {
-    if (typeof window === "undefined") return defaultGrowth;
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        const { data, error } = await client
+          .from("crop_growth_logs")
+          .select("*")
+          .order("recorded_at", { ascending: false });
 
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.GROWTH);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (data && !error && data.length > 0) {
+          return data.map((d) => ({
+            id: d.id,
+            cropName: d.crop_name,
+            growthStage: d.growth_stage,
+            healthScore: d.health_score,
+            leafColorSpad: d.leaf_color_spad,
+            plantHeightCm: d.plant_height_cm,
+            canopyCoveragePct: d.canopy_coverage_pct,
+            recordedAt: d.recorded_at,
+          }));
+        }
+      } catch {
+        // Fallback
       }
-    } catch {
-      // Fallback
+    }
+
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEYS.GROWTH);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {
+        // Fallback
+      }
     }
 
     return defaultGrowth;
@@ -156,6 +265,23 @@ export const db = {
 
     if (typeof window !== "undefined") {
       localStorage.setItem(STORAGE_KEYS.GROWTH, JSON.stringify(updated));
+    }
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.from("crop_growth_logs").insert({
+          crop_name: log.cropName,
+          growth_stage: log.growthStage,
+          health_score: log.healthScore,
+          leaf_color_spad: log.leafColorSpad,
+          plant_height_cm: log.plantHeightCm,
+          canopy_coverage_pct: log.canopyCoveragePct,
+          recorded_at: newLog.recordedAt,
+        });
+      } catch (err) {
+        console.warn("Could not sync growth log to Supabase:", err);
+      }
     }
 
     return newLog;
@@ -181,6 +307,20 @@ export const db = {
       }
     } catch {
       // Ignore
+    }
+
+    const client = getSupabaseClient();
+    if (client) {
+      try {
+        await client.from("voice_conversations").insert({
+          user_query: userQuery,
+          ai_response: aiResponse,
+          language_code: languageCode,
+          created_at: newChat.createdAt,
+        });
+      } catch (err) {
+        console.warn("Could not sync voice conversation to Supabase:", err);
+      }
     }
 
     return newChat;

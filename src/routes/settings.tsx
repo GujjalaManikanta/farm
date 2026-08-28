@@ -13,12 +13,23 @@ import {
   Layers,
   Sun,
   Moon,
+  Database,
+  CheckCircle2,
+  AlertCircle,
+  Copy,
+  ExternalLink,
+  RefreshCw,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { AiNote, SectionCard } from "@/components/farm-ui";
 import { farm } from "@/lib/farm-data";
 import { useLang, languages } from "@/lib/i18n";
 import { useTheme } from "@/lib/theme-context";
+import {
+  getStoredSupabaseConfig,
+  saveSupabaseConfig,
+  testSupabaseConnection,
+} from "@/lib/supabase";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/settings")({
@@ -43,6 +54,34 @@ function SettingsPage() {
   const [primaryCrop, setPrimaryCrop] = useState(farm.crop);
   const [speechSpeed, setSpeechSpeed] = useState("normal");
   const [notifications, setNotifications] = useState(true);
+
+  // Supabase Database Connection State
+  const initialDbConfig = getStoredSupabaseConfig();
+  const [supabaseUrl, setSupabaseUrl] = useState(initialDbConfig.url);
+  const [supabaseKey, setSupabaseKey] = useState(initialDbConfig.anonKey);
+  const [isDbConnecting, setIsDbConnecting] = useState(false);
+  const [dbStatus, setDbStatus] = useState<"connected" | "disconnected" | "local">(
+    initialDbConfig.isConfigured ? "connected" : "local"
+  );
+
+  const handleTestAndSaveDb = async () => {
+    if (!supabaseUrl || !supabaseKey) {
+      toast.error("Please enter both Supabase Project URL and Anon Key.");
+      return;
+    }
+
+    setIsDbConnecting(true);
+    const result = await testSupabaseConnection(supabaseUrl, supabaseKey);
+    setIsDbConnecting(false);
+
+    if (result.success) {
+      saveSupabaseConfig(supabaseUrl, supabaseKey);
+      setDbStatus("connected");
+      toast.success(result.message);
+    } else {
+      toast.error(result.message);
+    }
+  };
 
   const handleSave = () => {
     toast.success("Settings Saved Successfully!");
@@ -227,6 +266,121 @@ function SettingsPage() {
                 onChange={(e) => setFieldSize(e.target.value)}
                 className="mt-1.5 w-full rounded-2xl border border-border bg-muted/40 px-4 py-2.5 text-xs sm:text-sm font-bold text-foreground"
               />
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* Supabase Cloud Database Configuration */}
+        <SectionCard title="Supabase Cloud Database / క్లౌడ్ డేటాబేస్ అనుసంధానం" icon={Database}>
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-border/80 bg-muted/30 p-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex size-10 items-center justify-center rounded-xl font-bold ${
+                    dbStatus === "connected"
+                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                      : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                  }`}
+                >
+                  <Database className="size-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-foreground">Database Sync Status</p>
+                    {dbStatus === "connected" ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 className="size-3" />
+                        Cloud Supabase Active
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                        <AlertCircle className="size-3" />
+                        Local Offline Storage Active
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Connect your free Supabase project to sync crop scan history, growth telemetry, and AI voice transcripts across all devices.
+                  </p>
+                </div>
+              </div>
+
+              <a
+                href="https://supabase.com/dashboard"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 self-start sm:self-center rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold text-foreground hover:bg-muted transition-colors shadow-2xs"
+              >
+                <span>Supabase Dashboard</span>
+                <ExternalLink className="size-3.5" />
+              </a>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-xs font-bold uppercase text-muted-foreground">
+                  Supabase Project URL
+                </label>
+                <input
+                  type="text"
+                  placeholder="https://your-project.supabase.co"
+                  value={supabaseUrl}
+                  onChange={(e) => setSupabaseUrl(e.target.value)}
+                  className="mt-1.5 w-full rounded-2xl border border-border bg-muted/40 px-4 py-2.5 text-xs sm:text-sm font-medium text-foreground placeholder:text-muted-foreground/60"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold uppercase text-muted-foreground">
+                  Supabase Anon Public Key
+                </label>
+                <input
+                  type="password"
+                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  value={supabaseKey}
+                  onChange={(e) => setSupabaseKey(e.target.value)}
+                  className="mt-1.5 w-full rounded-2xl border border-border bg-muted/40 px-4 py-2.5 text-xs sm:text-sm font-medium text-foreground placeholder:text-muted-foreground/60"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <button
+                type="button"
+                onClick={handleTestAndSaveDb}
+                disabled={isDbConnecting}
+                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-xs transition-all hover:bg-emerald-700 active:scale-95 disabled:opacity-50 cursor-pointer"
+              >
+                {isDbConnecting ? (
+                  <>
+                    <RefreshCw className="size-4 animate-spin" />
+                    <span>Testing Connection...</span>
+                  </>
+                ) : (
+                  <>
+                    <Database className="size-4" />
+                    <span>Test & Connect Supabase</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    `-- Execute in Supabase SQL Editor:
+CREATE TABLE IF NOT EXISTS farmers (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), farmer_name VARCHAR(100), location VARCHAR(150), latitude DOUBLE PRECISION, longitude DOUBLE PRECISION, primary_crop VARCHAR(50), field_name VARCHAR(50), field_size_acres NUMERIC(5,2), preferred_language VARCHAR(10), created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS crop_scans (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), crop_name VARCHAR(50), disease_name VARCHAR(100), status VARCHAR(20), confidence NUMERIC(5,2), symptoms JSONB DEFAULT '[]'::jsonb, organic_remedy TEXT, chemical_remedy TEXT, preventive_care TEXT, image_url TEXT, created_at TIMESTAMPTZ DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS crop_growth_logs (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), crop_name VARCHAR(50), growth_stage VARCHAR(50), health_score INT, leaf_color_spad NUMERIC(5,2), plant_height_cm NUMERIC(6,2), canopy_coverage_pct NUMERIC(5,2), recorded_at TIMESTAMPTZ DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS voice_conversations (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_query TEXT, ai_response TEXT, language_code VARCHAR(10), created_at TIMESTAMPTZ DEFAULT NOW());`
+                  );
+                  toast.success("SQL Schema copied to clipboard! Paste it in Supabase SQL Editor.");
+                }}
+                className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-card px-4 py-2.5 text-xs sm:text-sm font-bold text-foreground hover:bg-muted transition-colors shadow-2xs cursor-pointer"
+              >
+                <Copy className="size-3.5 text-primary" />
+                <span>Copy SQL Setup Script</span>
+              </button>
             </div>
           </div>
         </SectionCard>
