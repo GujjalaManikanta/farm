@@ -61,7 +61,7 @@ function SettingsPage() {
   const [supabaseKey, setSupabaseKey] = useState(initialDbConfig.anonKey);
   const [isDbConnecting, setIsDbConnecting] = useState(false);
   const [dbStatus, setDbStatus] = useState<"connected" | "disconnected" | "local">(
-    initialDbConfig.isConfigured ? "connected" : "local"
+    initialDbConfig.isConfigured ? "connected" : "local",
   );
 
   const handleTestAndSaveDb = async () => {
@@ -118,7 +118,8 @@ function SettingsPage() {
         <SectionCard title="Theme & Display Appearance / థీమ్ & రూపం" icon={Sun}>
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              Switch between Light Mode (optimal for daytime farm use) and Dark Mode (battery saving & night mode):
+              Switch between Light Mode (optimal for daytime farm use) and Dark Mode (battery saving
+              & night mode):
             </p>
 
             <div className="grid grid-cols-2 gap-3 sm:max-w-md">
@@ -300,7 +301,8 @@ function SettingsPage() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Connect your free Supabase project to sync crop scan history, growth telemetry, and AI voice transcripts across all devices.
+                    Connect your free Supabase project to sync crop scan history, growth telemetry,
+                    and AI voice transcripts across all devices.
                   </p>
                 </div>
               </div>
@@ -372,7 +374,7 @@ function SettingsPage() {
 CREATE TABLE IF NOT EXISTS farmers (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), farmer_name VARCHAR(100), location VARCHAR(150), latitude DOUBLE PRECISION, longitude DOUBLE PRECISION, primary_crop VARCHAR(50), field_name VARCHAR(50), field_size_acres NUMERIC(5,2), preferred_language VARCHAR(10), created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS crop_scans (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), crop_name VARCHAR(50), disease_name VARCHAR(100), status VARCHAR(20), confidence NUMERIC(5,2), symptoms JSONB DEFAULT '[]'::jsonb, organic_remedy TEXT, chemical_remedy TEXT, preventive_care TEXT, image_url TEXT, created_at TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS crop_growth_logs (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), crop_name VARCHAR(50), growth_stage VARCHAR(50), health_score INT, leaf_color_spad NUMERIC(5,2), plant_height_cm NUMERIC(6,2), canopy_coverage_pct NUMERIC(5,2), recorded_at TIMESTAMPTZ DEFAULT NOW());
-CREATE TABLE IF NOT EXISTS voice_conversations (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_query TEXT, ai_response TEXT, language_code VARCHAR(10), created_at TIMESTAMPTZ DEFAULT NOW());`
+CREATE TABLE IF NOT EXISTS voice_conversations (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_query TEXT, ai_response TEXT, language_code VARCHAR(10), created_at TIMESTAMPTZ DEFAULT NOW());`,
                   );
                   toast.success("SQL Schema copied to clipboard! Paste it in Supabase SQL Editor.");
                 }}

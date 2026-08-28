@@ -55,7 +55,10 @@ export function getSupabaseClient(): SupabaseClient | null {
 /**
  * Test connectivity with Supabase Cloud
  */
-export async function testSupabaseConnection(url?: string, key?: string): Promise<{ success: boolean; message: string }> {
+export async function testSupabaseConnection(
+  url?: string,
+  key?: string,
+): Promise<{ success: boolean; message: string }> {
   const targetUrl = url || getStoredSupabaseConfig().url;
   const targetKey = key || getStoredSupabaseConfig().anonKey;
 
@@ -78,7 +81,12 @@ export async function testSupabaseConnection(url?: string, key?: string): Promis
     // Simple ping to check if credentials are valid
     const { error } = await tempClient.from("farmers").select("id").limit(1);
 
-    if (error && error.code !== "PGRST116" && !error.message.includes("relation") && !error.message.includes("does not exist")) {
+    if (
+      error &&
+      error.code !== "PGRST116" &&
+      !error.message.includes("relation") &&
+      !error.message.includes("does not exist")
+    ) {
       return {
         success: false,
         message: error.message || "Failed to authenticate with Supabase.",

@@ -93,22 +93,13 @@ export function AgriSmartSymbol({ className = "size-10" }: { className?: string 
         />
 
         {/* Left Sprout Petal */}
-        <path
-          d="M24 26 C16 26 11 19 11 11 C20 11 24 18 24 26 Z"
-          fill="url(#leafGradBrand)"
-        />
+        <path d="M24 26 C16 26 11 19 11 11 C20 11 24 18 24 26 Z" fill="url(#leafGradBrand)" />
 
         {/* Right AI Bio-circuit Petal */}
-        <path
-          d="M24 22 C32 22 37 15 37 7 C28 7 24 14 24 22 Z"
-          fill="url(#leafGradBrand)"
-        />
+        <path d="M24 22 C32 22 37 15 37 7 C28 7 24 14 24 22 Z" fill="url(#leafGradBrand)" />
 
         {/* Central Vitality Core */}
-        <path
-          d="M24 17 C26 13 24 6 24 4 C24 6 22 13 24 17 Z"
-          fill="url(#goldGradBrand)"
-        />
+        <path d="M24 17 C26 13 24 6 24 4 C24 6 22 13 24 17 Z" fill="url(#goldGradBrand)" />
 
         {/* Smart Telemetry Nodes */}
         <circle cx="11" cy="11" r="2.5" fill="#38bdf8" />
@@ -203,7 +194,11 @@ export function ThemeToggle({ className }: { className?: string }) {
         "relative flex size-9 items-center justify-center rounded-full border border-border bg-card text-foreground transition-all hover:bg-muted active:scale-95 cursor-pointer shadow-2xs",
         className,
       )}
-      title={theme === "dark" ? "Switch to Light Mode / లైట్ మోడ్‌కి మార్చండి" : "Switch to Dark Mode / డార్క్ మోడ్‌కి మార్చండి"}
+      title={
+        theme === "dark"
+          ? "Switch to Light Mode / లైట్ మోడ్‌కి మార్చండి"
+          : "Switch to Dark Mode / డార్క్ మోడ్‌కి మార్చండి"
+      }
       aria-label="Toggle Theme"
     >
       {theme === "dark" ? (

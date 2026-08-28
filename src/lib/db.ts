@@ -290,7 +290,11 @@ export const db = {
   /**
    * 4. Voice Assistant Conversations
    */
-  async saveVoiceChat(userQuery: string, aiResponse: string, languageCode: string): Promise<DbVoiceChat> {
+  async saveVoiceChat(
+    userQuery: string,
+    aiResponse: string,
+    languageCode: string,
+  ): Promise<DbVoiceChat> {
     const newChat: DbVoiceChat = {
       id: "chat-" + Date.now(),
       userQuery,
@@ -303,7 +307,10 @@ export const db = {
       if (typeof window !== "undefined") {
         const stored = localStorage.getItem(STORAGE_KEYS.CHATS);
         const current: DbVoiceChat[] = stored ? JSON.parse(stored) : [];
-        localStorage.setItem(STORAGE_KEYS.CHATS, JSON.stringify([newChat, ...current.slice(0, 50)]));
+        localStorage.setItem(
+          STORAGE_KEYS.CHATS,
+          JSON.stringify([newChat, ...current.slice(0, 50)]),
+        );
       }
     } catch {
       // Ignore
@@ -349,7 +356,8 @@ const defaultScans: DbCropScan[] = [
       "Concentric dark brown target spots on lower leaves",
       "Yellow chlorotic halos surrounding lesions",
     ],
-    organicRemedy: "Spray 5% Neem oil (5ml/L) or Trichoderma viride (5g/L). Prune infected lower leaves.",
+    organicRemedy:
+      "Spray 5% Neem oil (5ml/L) or Trichoderma viride (5g/L). Prune infected lower leaves.",
     chemicalRemedy: "Spray Mancozeb 75% WP (2g/L) or Copper Oxychloride 50% WP (2.5g/L).",
     preventiveCare: "Avoid overhead irrigation, stake plants to increase airflow.",
     createdAt: new Date(Date.now() - 86400000).toISOString(),
