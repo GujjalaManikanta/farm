@@ -55,6 +55,7 @@ export default defineConfig({
     server: {
       host: true, // Listens on 0.0.0.0 (all network interfaces)
       port: 8080,
+      allowedHosts: true, // Allows any domain / tunnel from different Wi-Fi networks
     },
     plugins: [ttsProxyPlugin()],
   },
