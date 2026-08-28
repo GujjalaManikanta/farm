@@ -10,11 +10,35 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AlertsRouteImport } from './routes/alerts'
+import { Route as CropDoctorRouteImport } from './routes/crop-doctor'
+import { Route as CropGrowthRouteImport } from './routes/crop-growth'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as HistoryRouteImport } from './routes/history'
+import { Route as IrrigationRouteImport } from './routes/irrigation'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SoilRouteImport } from './routes/soil'
+import { Route as VoiceAssistantRouteImport } from './routes/voice-assistant'
+import { Route as WeatherRouteImport } from './routes/weather'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AlertsRoute = AlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CropDoctorRoute = CropDoctorRouteImport.update({
+  id: '/crop-doctor',
+  path: '/crop-doctor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CropGrowthRoute = CropGrowthRouteImport.update({
+  id: '/crop-growth',
+  path: '/crop-growth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -22,31 +46,131 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IrrigationRoute = IrrigationRouteImport.update({
+  id: '/irrigation',
+  path: '/irrigation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SoilRoute = SoilRouteImport.update({
+  id: '/soil',
+  path: '/soil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VoiceAssistantRoute = VoiceAssistantRouteImport.update({
+  id: '/voice-assistant',
+  path: '/voice-assistant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WeatherRoute = WeatherRouteImport.update({
+  id: '/weather',
+  path: '/weather',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/alerts': typeof AlertsRoute
+  '/crop-doctor': typeof CropDoctorRoute
+  '/crop-growth': typeof CropGrowthRoute
   '/dashboard': typeof DashboardRoute
+  '/history': typeof HistoryRoute
+  '/irrigation': typeof IrrigationRoute
+  '/settings': typeof SettingsRoute
+  '/soil': typeof SoilRoute
+  '/voice-assistant': typeof VoiceAssistantRoute
+  '/weather': typeof WeatherRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/alerts': typeof AlertsRoute
+  '/crop-doctor': typeof CropDoctorRoute
+  '/crop-growth': typeof CropGrowthRoute
   '/dashboard': typeof DashboardRoute
+  '/history': typeof HistoryRoute
+  '/irrigation': typeof IrrigationRoute
+  '/settings': typeof SettingsRoute
+  '/soil': typeof SoilRoute
+  '/voice-assistant': typeof VoiceAssistantRoute
+  '/weather': typeof WeatherRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/alerts': typeof AlertsRoute
+  '/crop-doctor': typeof CropDoctorRoute
+  '/crop-growth': typeof CropGrowthRoute
   '/dashboard': typeof DashboardRoute
+  '/history': typeof HistoryRoute
+  '/irrigation': typeof IrrigationRoute
+  '/settings': typeof SettingsRoute
+  '/soil': typeof SoilRoute
+  '/voice-assistant': typeof VoiceAssistantRoute
+  '/weather': typeof WeatherRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard'
+  fullPaths:
+    | '/'
+    | '/alerts'
+    | '/crop-doctor'
+    | '/crop-growth'
+    | '/dashboard'
+    | '/history'
+    | '/irrigation'
+    | '/settings'
+    | '/soil'
+    | '/voice-assistant'
+    | '/weather'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard'
-  id: '__root__' | '/' | '/dashboard'
+  to:
+    | '/'
+    | '/alerts'
+    | '/crop-doctor'
+    | '/crop-growth'
+    | '/dashboard'
+    | '/history'
+    | '/irrigation'
+    | '/settings'
+    | '/soil'
+    | '/voice-assistant'
+    | '/weather'
+  id:
+    | '__root__'
+    | '/'
+    | '/alerts'
+    | '/crop-doctor'
+    | '/crop-growth'
+    | '/dashboard'
+    | '/history'
+    | '/irrigation'
+    | '/settings'
+    | '/soil'
+    | '/voice-assistant'
+    | '/weather'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AlertsRoute: typeof AlertsRoute
+  CropDoctorRoute: typeof CropDoctorRoute
+  CropGrowthRoute: typeof CropGrowthRoute
   DashboardRoute: typeof DashboardRoute
+  HistoryRoute: typeof HistoryRoute
+  IrrigationRoute: typeof IrrigationRoute
+  SettingsRoute: typeof SettingsRoute
+  SoilRoute: typeof SoilRoute
+  VoiceAssistantRoute: typeof VoiceAssistantRoute
+  WeatherRoute: typeof WeatherRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,6 +182,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/alerts': {
+      id: '/alerts'
+      path: '/alerts'
+      fullPath: '/alerts'
+      preLoaderRoute: typeof AlertsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/crop-doctor': {
+      id: '/crop-doctor'
+      path: '/crop-doctor'
+      fullPath: '/crop-doctor'
+      preLoaderRoute: typeof CropDoctorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/crop-growth': {
+      id: '/crop-growth'
+      path: '/crop-growth'
+      fullPath: '/crop-growth'
+      preLoaderRoute: typeof CropGrowthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -65,12 +210,63 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/irrigation': {
+      id: '/irrigation'
+      path: '/irrigation'
+      fullPath: '/irrigation'
+      preLoaderRoute: typeof IrrigationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/soil': {
+      id: '/soil'
+      path: '/soil'
+      fullPath: '/soil'
+      preLoaderRoute: typeof SoilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/voice-assistant': {
+      id: '/voice-assistant'
+      path: '/voice-assistant'
+      fullPath: '/voice-assistant'
+      preLoaderRoute: typeof VoiceAssistantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/weather': {
+      id: '/weather'
+      path: '/weather'
+      fullPath: '/weather'
+      preLoaderRoute: typeof WeatherRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AlertsRoute: AlertsRoute,
+  CropDoctorRoute: CropDoctorRoute,
+  CropGrowthRoute: CropGrowthRoute,
   DashboardRoute: DashboardRoute,
+  HistoryRoute: HistoryRoute,
+  IrrigationRoute: IrrigationRoute,
+  SettingsRoute: SettingsRoute,
+  SoilRoute: SoilRoute,
+  VoiceAssistantRoute: VoiceAssistantRoute,
+  WeatherRoute: WeatherRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

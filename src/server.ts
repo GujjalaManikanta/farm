@@ -47,6 +47,42 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const url = new URL(request.url);
+
+      // Handle TTS Proxy
+      if (url.pathname === "/api/tts") {
+        const text = url.searchParams.get("text") || "";
+        const lang = url.searchParams.get("lang") || "te";
+
+        if (!text) {
+          return new Response("Missing text", { status: 400 });
+        }
+
+        const ttsLang = lang === "pa" ? "pa" : lang;
+        const googleTtsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(ttsLang)}&q=${encodeURIComponent(text.slice(0, 200))}`;
+
+        const ttsRes = await fetch(googleTtsUrl, {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            Referer: "https://translate.google.com/",
+          },
+        });
+
+        if (!ttsRes.ok) {
+          return new Response("TTS Fetch Failed", { status: ttsRes.status });
+        }
+
+        const audioData = await ttsRes.arrayBuffer();
+        return new Response(audioData, {
+          headers: {
+            "Content-Type": "audio/mpeg",
+            "Cache-Control": "public, max-age=86400",
+            "Access-Control-Allow-Origin": "*",
+          },
+        });
+      }
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

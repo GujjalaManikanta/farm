@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="60%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#065f46" />
+    </linearGradient>
+    <linearGradient id="aiGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b" />
+      <stop offset="100%" stop-color="#022c22" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Shield -->
+  <rect width="64" height="64" rx="18" fill="url(#bgGrad)" />
+  <rect x="1" y="1" width="62" height="62" rx="17" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.3" />
+
+  <!-- Neural Connection Nodes & Rings -->
+  <circle cx="32" cy="48" r="3.5" fill="#f59e0b" />
+  <path d="M32 48 L32 30" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="1 3" />
+  
+  <!-- Left Sprout Leaf -->
+  <path d="M32 34 C24 34 18 26 18 16 C28 16 32 24 32 34 Z" fill="url(#leafGrad)" />
+  
+  <!-- Right AI Circuit Leaf -->
+  <path d="M32 30 C40 30 46 22 46 12 C36 12 32 20 32 30 Z" fill="url(#leafGrad)" />
+
+  <!-- Central Energy Core -->
+  <path d="M32 24 C35 18 32 10 32 8 C32 10 29 18 32 24 Z" fill="#fbbf24" />
+  
+  <!-- Bio-tech Network Nodes -->
+  <circle cx="18" cy="16" r="2.5" fill="#38bdf8" />
+  <circle cx="46" cy="12" r="2.5" fill="#34d399" />
+  <circle cx="32" cy="8" r="2" fill="#fbbf24" />
+
+  <!-- Connecting Quantum Arc -->
+  <path d="M18 16 Q 32 4 46 12" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.6" stroke-dasharray="2 2" />
+</svg>
