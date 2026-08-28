@@ -560,49 +560,42 @@ function CropDoctor() {
     } catch (err) {
       console.warn("AI vision analysis fallback:", err);
 
-      // Graceful fallback with high accuracy
-      const fallbackResult = getLocalizedCropDiagnosis(
-        "tomato",
-        "early_blight",
+      const invalidResult = getLocalizedCropDiagnosis(
+        "invalid",
+        "invalid_photo",
         "attention",
-        94,
+        20,
         {
-          greennessPct: 68,
-          necrosisPct: 15,
-          yellowingPct: 10,
-          powderyPct: 4,
-          rustPct: 3,
-          leafShape: "Compound Lobed (టమోటా/మిరప)",
+          greennessPct: 5,
+          necrosisPct: 5,
+          yellowingPct: 5,
+          powderyPct: 2,
+          rustPct: 2,
+          botanicalScorePct: 10,
+          leafShape: "Non-Botanical",
         },
         lang,
         formattedAddress,
         globalSoilMoisture,
       );
 
-      setAnalysisResult(fallbackResult);
+      setAnalysisResult(invalidResult);
       setHasScanned(true);
       setIsScanning(false);
-
-      const now = new Date();
-      const formattedDate = `${now.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} • ${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
-
-      saveHistoryRecord({
-        id: Date.now().toString(),
-        date: formattedDate,
-        cropKey: "tomato",
-        diseaseKey: "early_blight",
-        crop: fallbackResult.cropName,
-        field: formattedAddress,
-        disease: fallbackResult.diseaseName,
-        health: fallbackResult.severity,
-        symptoms: fallbackResult.symptoms[0],
-        recommendation: fallbackResult.organicRemedy.slice(0, 100) + "...",
-        outcome: "AI Vision Detected & Analyzed",
-        image: activeImage,
-      });
-
-      toast.success(`AI గుర్తించిన పంట: ${fallbackResult.cropName}`);
-      playSpeech(fallbackResult.speechText, lang);
+      setValidationError(
+        invalidResult.invalidReason ||
+          (lang === "te"
+            ? "అప్‌లోడ్ చేసిన చిత్రం పంట లేదా మొక్కగా గుర్తించబడలేదు. దయచేసి సరైన పంట ఆకు ఫోటోను అప్‌లోడ్ చేయండి."
+            : lang === "hi"
+              ? "अपलोड की गई फोटो फसल या पौधा नहीं है। कृपया स्पष्ट पत्ती या फसल की सही फोटो अपलोड करें।"
+              : "The uploaded image does not appear to be a crop or plant. Please upload a clear photo of a crop leaf."),
+      );
+      toast.error(
+        lang === "te"
+          ? "సరైన పంట లేదా ఆకు ఫోటోను అప్‌లోడ్ చేయండి!"
+          : "Please upload a correct crop or leaf photo!",
+      );
+      playSpeech(invalidResult.speechText, lang);
     }
   };
 
@@ -755,6 +748,23 @@ function CropDoctor() {
                     </button>
                   </div>
                 </div>
+
+                {/* Validation Error Alert Banner */}
+                {validationError && (
+                  <div className="flex items-start gap-2.5 rounded-2xl border-2 border-rose-500/40 bg-rose-500/10 p-3.5 text-xs text-rose-700 dark:text-rose-300 animate-in fade-in slide-in-from-top-2">
+                    <AlertTriangle className="size-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
+                    <div>
+                      <p className="font-bold">
+                        {lang === "te"
+                          ? "చెల్లని చిత్రం (Invalid Photo):"
+                          : lang === "hi"
+                            ? "अमान्य फोटो:"
+                            : "Invalid Photo Detected:"}
+                      </p>
+                      <p className="mt-0.5 leading-relaxed">{validationError}</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Scan Button */}
                 <button
