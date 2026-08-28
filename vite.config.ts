@@ -52,6 +52,10 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    server: {
+      host: true, // Listens on 0.0.0.0 (all network interfaces)
+      port: 8080,
+    },
     plugins: [ttsProxyPlugin()],
   },
 });
