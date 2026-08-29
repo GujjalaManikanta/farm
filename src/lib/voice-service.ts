@@ -37,8 +37,8 @@ export const sanitizeTextForSpeech = (text: string): string => {
 
 /**
  * Plays speech in any of the 9 Indian/global languages:
- * 1. Uses high-fidelity local proxy audio stream (/api/tts) for crystal clear native voice (Telugu, Hindi, Tamil, Kannada, etc.).
- * 2. Seamlessly falls back to browser SpeechSynthesis if offline.
+ * 1. Uses high-fidelity direct Google TTS audio stream for native Telugu, Hindi, Tamil, Kannada, etc.
+ * 2. Seamlessly falls back to browser SpeechSynthesis.
  */
 export const playSpeech = async (
   rawText: string,
@@ -59,6 +59,30 @@ export const playSpeech = async (
 
   callbacks?.onStart?.();
 
+  const langCodes: Record<Lang, string> = {
+    en: "en-IN",
+    te: "te-IN",
+    hi: "hi-IN",
+    ta: "ta-IN",
+    kn: "kn-IN",
+    mr: "mr-IN",
+    bn: "bn-IN",
+    gu: "gu-IN",
+    pa: "pa-IN",
+  };
+
+  const ttsLangs: Record<Lang, string> = {
+    en: "en",
+    te: "te",
+    hi: "hi",
+    ta: "ta",
+    kn: "kn",
+    mr: "mr",
+    bn: "bn",
+    gu: "gu",
+    pa: "pa",
+  };
+
   const fallbackToBrowserSynthesis = () => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
       callbacks?.onEnd?.();
@@ -69,18 +93,6 @@ export const playSpeech = async (
       if (window.speechSynthesis.paused) {
         window.speechSynthesis.resume();
       }
-
-      const langCodes: Record<Lang, string> = {
-        en: "en-IN",
-        te: "te-IN",
-        hi: "hi-IN",
-        ta: "ta-IN",
-        kn: "kn-IN",
-        mr: "mr-IN",
-        bn: "bn-IN",
-        gu: "gu-IN",
-        pa: "pa-IN",
-      };
 
       const voiceCode = langCodes[lang] ?? "te-IN";
       const utterance = new SpeechSynthesisUtterance(cleanText);
@@ -114,8 +126,9 @@ export const playSpeech = async (
   };
 
   try {
-    // Request server TTS endpoint (handles Telugu, Hindi, Tamil, Kannada, Marathi, Bengali, Gujarati, Punjabi, English)
-    const audioUrl = `/api/tts?lang=${encodeURIComponent(lang)}&text=${encodeURIComponent(cleanText.slice(0, 200))}`;
+    const ttsLang = ttsLangs[lang] ?? "te";
+    const snippet = cleanText.slice(0, 190);
+    const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${ttsLang}&client=tw-ob&q=${encodeURIComponent(snippet)}`;
     const audio = new Audio(audioUrl);
     currentAudio = audio;
 
@@ -129,7 +142,13 @@ export const playSpeech = async (
       fallbackToBrowserSynthesis();
     };
 
-    await audio.play();
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        currentAudio = null;
+        fallbackToBrowserSynthesis();
+      });
+    }
   } catch {
     fallbackToBrowserSynthesis();
   }
