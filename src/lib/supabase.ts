@@ -5,9 +5,20 @@ const STORAGE_KEYS = {
   KEY: "agrismart_supabase_anon_key",
 };
 
-// Default fallback demo credentials or environment variables
-const ENV_URL = (typeof process !== "undefined" ? process.env?.VITE_SUPABASE_URL : "") || "";
-const ENV_KEY = (typeof process !== "undefined" ? process.env?.VITE_SUPABASE_ANON_KEY : "") || "";
+// Default active Supabase credentials
+const DEFAULT_URL = "https://dbjdrptnjmdyhjfrvyff.supabase.co";
+const DEFAULT_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRiamRycHRuam1keWhqZnJ2eWZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5NTU4MDgsImV4cCI6MjEwMzUzMTgwOH0.FR-0CdoyDb1revsUOVW-FZawFQGQWHMVGXFKQ3qZKTs";
+
+const ENV_URL =
+  (typeof process !== "undefined" ? process.env?.VITE_SUPABASE_URL : "") ||
+  (typeof import.meta !== "undefined" ? (import.meta as { env?: { VITE_SUPABASE_URL?: string } }).env?.VITE_SUPABASE_URL : "") ||
+  DEFAULT_URL;
+
+const ENV_KEY =
+  (typeof process !== "undefined" ? process.env?.VITE_SUPABASE_ANON_KEY : "") ||
+  (typeof import.meta !== "undefined" ? (import.meta as { env?: { VITE_SUPABASE_ANON_KEY?: string } }).env?.VITE_SUPABASE_ANON_KEY : "") ||
+  DEFAULT_KEY;
 
 export function getStoredSupabaseConfig(): { url: string; anonKey: string; isConfigured: boolean } {
   if (typeof window === "undefined") {
