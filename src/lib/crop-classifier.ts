@@ -111,77 +111,53 @@ export const analyzeImagePixels = async (
           const g = data[i + 1];
           const b = data[i + 2];
 
-          // Skip pure black borders, transparent pixels, and pure white blowout
+          // Skip pure black borders, dark shadows, and blown-out bright white
           const brightness = (r + g + b) / 3;
-          if (brightness < 12 || brightness > 252) continue;
+          if (brightness < 18 || brightness > 248) continue;
 
           totalValidPixels++;
 
-          // 1. Organic Chlorophyll Green (Botanical plant foliage)
-          if (g >= 40 && g > r * 1.1 && g > b * 1.12 && g - r >= 10) {
+          // 1. Organic Plant Chlorophyll Green (Leaf foliage: green strongly dominates red and blue)
+          if (g >= 45 && g > r * 1.15 && g > b * 1.20 && g - r >= 12) {
             greenPixels++;
           }
-          // 2. Organic Leaf Chlorosis / Yellowing
-          else if (r >= 95 && g >= 95 && b < 85 && r + g > 2.2 * b && Math.abs(r - g) < 45) {
+          // 2. Organic Leaf Chlorosis / Disease Yellowing (High red & green, low blue)
+          else if (r >= 110 && g >= 110 && b <= 75 && (r + g) > 2.4 * b && Math.abs(r - g) <= 35) {
             yellowPixels++;
           }
           // 3. Organic Leaf Rust (Orange/rust fungal pustules)
-          else if (r >= 135 && g >= 60 && g <= 135 && b <= 60 && r - g >= 30) {
+          else if (r >= 135 && g >= 60 && g <= 125 && b <= 55 && (r - g) >= 40) {
             rustPixels++;
           }
           // 4. Powdery Mildew White fungal coating on plant
-          else if (
-            brightness > 185 &&
-            Math.abs(r - g) < 20 &&
-            Math.abs(g - b) < 20 &&
-            Math.abs(r - b) < 20
-          ) {
+          else if (brightness > 185 && Math.abs(r - g) < 18 && Math.abs(g - b) < 18 && Math.abs(r - b) < 18) {
             powderyPixels++;
           }
-          // 5. Organic Necrotic Lesion Tissue (Brown blight lesions)
-          else if (
-            r >= 55 &&
-            r <= 145 &&
-            g >= 35 &&
-            g < r &&
-            b <= 65 &&
-            r - b >= 20 &&
-            g - b >= 8
-          ) {
+          // 5. Organic Necrotic Lesion Tissue (Brown blight spots on leaves)
+          else if (r >= 60 && r <= 140 && g >= 35 && g < r && b <= 60 && (r - b) >= 25 && (g - b) >= 6) {
             necroticPixels++;
           }
-          // 6. Human Skin Tones (Faces, hands, selfies)
-          else if (
-            r >= 120 &&
-            g >= 70 &&
-            g <= 190 &&
-            b >= 50 &&
-            b <= 160 &&
-            r - g >= 15 &&
-            r - b >= 25 &&
-            g - b >= 6 &&
-            g < r * 0.94
-          ) {
+          // 6. Human Skin Tones (Selfies, faces, hands, skin)
+          else if (r >= 115 && g >= 65 && g <= 190 && b >= 45 && b <= 160 && (r - g) >= 14 && (r - b) >= 22 && (g - b) >= 5 && g < r * 0.95) {
             skinPixels++;
           }
-          // 7. Non-plant Sky / Blue Clothing / Ocean
-          else if (b >= 75 && b > r * 1.25 && b > g * 1.12) {
+          // 7. Non-plant Sky / Blue Clothing / Ocean / Vehicle
+          else if (b >= 75 && b > r * 1.20 && b > g * 1.10) {
             bluePixels++;
           }
           // 8. Artificial Magenta / Neon Pink / Purple
-          else if (r >= 130 && b >= 110 && g < 85) {
+          else if (r >= 125 && b >= 105 && g < 85) {
             artificialPixels++;
           }
-          // 9. Monotone Grey / Road Asphalt / Indoor Walls
-          else if (Math.abs(r - g) < 10 && Math.abs(g - b) < 10 && Math.abs(r - b) < 10) {
+          // 9. Monotone Grey / Road Asphalt / Indoor Walls / Furniture
+          else if (Math.abs(r - g) < 12 && Math.abs(g - b) < 12 && Math.abs(r - b) < 12) {
             neutralGreyPixels++;
           }
         }
 
         const validTotal = Math.max(totalValidPixels, 1);
-        const botanicalPixels =
-          greenPixels + yellowPixels + rustPixels + necroticPixels * 0.8 + powderyPixels * 0.5;
-        const botanicalScorePct = Math.round((botanicalPixels / validTotal) * 100);
+        const foliagePixels = greenPixels + yellowPixels + rustPixels;
+        const foliageScorePct = Math.round((foliagePixels / validTotal) * 100);
         const greennessPct = Math.round((greenPixels / validTotal) * 100);
         const necrosisPct = Math.round((necroticPixels / validTotal) * 100);
         const yellowingPct = Math.round((yellowPixels / validTotal) * 100);
@@ -191,21 +167,26 @@ export const analyzeImagePixels = async (
         const skinPct = Math.round((skinPixels / validTotal) * 100);
         const bluePct = Math.round((bluePixels / validTotal) * 100);
         const neutralPct = Math.round((neutralGreyPixels / validTotal) * 100);
+        const artificialPct = Math.round((artificialPixels / validTotal) * 100);
 
         const aspectRatio = img.naturalWidth / Math.max(img.naturalHeight, 1);
         const leafShape =
           aspectRatio > 1.4 ? "Narrow Blade (వరి/మొక్కజొన్న)" : "Compound Lobed (టమోటా/మిరప)";
 
         // Rigorous Botanical Validation Rule:
-        // 1. Must contain genuine plant foliage color signatures (>=18% botanical or >=12% pure green)
-        // 2. Rejects selfies/faces (skinPct > 15%)
-        // 3. Rejects cars/sky/clothing (bluePct > 25%)
-        // 4. Rejects grey walls/asphalt (neutralPct > 65% unless high plant green exists)
-        const isPlantFoliagePresent = botanicalScorePct >= 18 || greennessPct >= 12;
-        const isNonPlantDominated =
-          skinPct > 15 || bluePct > 25 || (neutralPct > 65 && greennessPct < 15);
+        // 1. Genuine crop/leaf photo MUST contain at least 22% primary foliage (green or chlorotic yellow/rust), OR >= 15% green + leaf necrosis.
+        // 2. Must NOT be dominated by human skin (skinPct > 8%), blue objects (bluePct > 20%), synthetic colors (artificialPct > 15%), or indoor/grey backgrounds (neutralPct > 60% with low green).
+        const hasAuthenticFoliage =
+          foliageScorePct >= 22 ||
+          (greennessPct >= 15 && (necrosisPct >= 8 || yellowingPct >= 8 || powderyPct >= 6));
 
-        const isValidCrop = isPlantFoliagePresent && !isNonPlantDominated;
+        const isNonCropSubject =
+          skinPct > 8 ||
+          bluePct > 20 ||
+          artificialPct > 15 ||
+          (neutralPct > 60 && greennessPct < 20);
+
+        const isValidCrop = hasAuthenticFoliage && !isNonCropSubject;
 
         resolve({
           isValidCrop,
@@ -214,7 +195,7 @@ export const analyzeImagePixels = async (
           yellowingPct,
           powderyPct,
           rustPct,
-          botanicalScorePct,
+          botanicalScorePct: foliageScorePct,
           aspectRatio,
           leafShape,
         });

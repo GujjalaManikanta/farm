@@ -479,7 +479,6 @@ function CropDoctor() {
     reader.onload = () => {
       const dataUrl = reader.result as string;
       setImagePreview(dataUrl);
-      toast.success("ఫోటో అప్‌లోడ్ విజయవంతమైంది!");
       runAiAnalysis(dataUrl);
     };
 
