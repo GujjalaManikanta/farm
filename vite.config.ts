@@ -49,6 +49,7 @@ const ttsProxyPlugin = (): Plugin => ({
 
 export default defineConfig({
   tanstackStart: {
+    router: { entry: "router" },
     server: { entry: "server" },
   },
   vite: {
