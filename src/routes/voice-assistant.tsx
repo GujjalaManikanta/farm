@@ -128,96 +128,97 @@ function VoiceAssistantPage() {
   );
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const windowWithSpeech = window as unknown as {
-        SpeechRecognition?: new () => {
-          continuous: boolean;
-          interimResults: boolean;
-          lang: string;
-          onresult: (e: { results: { 0: { 0: { transcript: string } } } }) => void;
-          onerror: () => void;
-          onend: () => void;
-          start: () => void;
-          stop: () => void;
-        };
-        webkitSpeechRecognition?: new () => {
-          continuous: boolean;
-          interimResults: boolean;
-          lang: string;
-          onresult: (e: { results: { 0: { 0: { transcript: string } } } }) => void;
-          onerror: () => void;
-          onend: () => void;
-          start: () => void;
-          stop: () => void;
-        };
-      };
-
-      const SpeechRecognitionClass =
-        windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition;
-
-      if (SpeechRecognitionClass) {
-        const recognition = new SpeechRecognitionClass();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = currentLangInfo.voiceCode;
-
-        recognition.onresult = (event) => {
-          const transcript = event.results[0][0].transcript;
-          setIsListening(false);
-          handleQuery(transcript);
-        };
-
-        recognition.onerror = () => {
-          setIsListening(false);
-          toast.error("Microphone timed out. Tap a question chip below!");
-        };
-
-        recognition.onend = () => setIsListening(false);
-        recognitionRef.current = recognition;
-      }
-    }
-
-    return () => {
-      stopSpeaking();
-      if (recognitionRef.current) {
-        try {
-          (recognitionRef.current as { stop: () => void }).stop();
-        } catch {
-          // Ignore error on teardown
-        }
-      }
-    };
-  }, [lang, currentLangInfo, handleQuery, stopSpeaking]);
-
-  useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const toggleListening = () => {
     if (isListening) {
-      if (recognitionRef.current) (recognitionRef.current as { stop: () => void }).stop();
+      if (recognitionRef.current) {
+        try {
+          (recognitionRef.current as { stop: () => void }).stop();
+        } catch {
+          // Ignore
+        }
+      }
       setIsListening(false);
       return;
     }
 
     stopSpeaking();
 
-    if (recognitionRef.current) {
-      try {
-        const rec = recognitionRef.current as {
-          lang: string;
-          start: () => void;
-        };
-        rec.lang = currentLangInfo.voiceCode;
-        rec.start();
+    if (typeof window === "undefined") return;
+
+    const windowWithSpeech = window as unknown as {
+      SpeechRecognition?: new () => {
+        continuous: boolean;
+        interimResults: boolean;
+        lang: string;
+        maxAlternatives: number;
+        onstart: () => void;
+        onresult: (e: { results: { 0: { 0: { transcript: string } } } }) => void;
+        onerror: (e: { error?: string }) => void;
+        onend: () => void;
+        start: () => void;
+        stop: () => void;
+      };
+      webkitSpeechRecognition?: new () => {
+        continuous: boolean;
+        interimResults: boolean;
+        lang: string;
+        maxAlternatives: number;
+        onstart: () => void;
+        onresult: (e: { results: { 0: { 0: { transcript: string } } } }) => void;
+        onerror: (e: { error?: string }) => void;
+        onend: () => void;
+        start: () => void;
+        stop: () => void;
+      };
+    };
+
+    const SpeechRecognitionClass =
+      windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition;
+
+    if (!SpeechRecognitionClass) {
+      toast.error("Speech recognition not supported on this browser. Tap any question chip below!");
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognitionClass();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.lang = currentLangInfo.voiceCode;
+
+      recognition.onstart = () => {
         setIsListening(true);
-        toast.info(`Listening in ${currentLangInfo.label}... Speak now!`);
-      } catch {
+        toast.info(`🎙️ Listening in ${currentLangInfo.native}... Speak now!`);
+      };
+
+      recognition.onresult = (event) => {
         setIsListening(false);
-        toast.error("Microphone error. Tap quick questions below.");
-      }
-    } else {
-      toast.error("Speech recognition is not supported on this device. Use quick questions.");
+        const transcript = event.results?.[0]?.[0]?.transcript;
+        if (transcript) {
+          handleQuery(transcript);
+        }
+      };
+
+      recognition.onerror = (e) => {
+        setIsListening(false);
+        if (e.error !== "no-speech") {
+          toast.error("Could not capture audio. Tap a quick question chip below!");
+        }
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch {
+      setIsListening(false);
+      toast.error("Could not access microphone. Please check browser permissions.");
     }
   };
 
